@@ -1,0 +1,115 @@
+variables:
+  CONFIG_IMAGE_DEPLOYMENT: registry.gitlab.com/shipmonk/infrastructure/deployment:prod-ae8889cfe457c3e02a37149991330c8f
+  CONFIG_REGISTRY_NAME_EU: 515719629808.dkr.ecr.eu-west-1.amazonaws.com
+  CONFIG_REGISTRY_NAME_US: 515719629808.dkr.ecr.us-east-1.amazonaws.com
+
+image:
+  name: $CONFIG_IMAGE_DEPLOYMENT
+
+stages:
+  - Build
+  - Update Tag
+
+# prefabs
+.eu:
+  tags:
+    - gitlab-org
+
+.master:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master" && $CI_PIPELINE_SOURCE == "push"'
+
+.mr:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+.useDefaultSchedule:
+  only:
+    refs:
+      - schedules
+  tags:
+    - gitlab-org
+
+build docker image:
+  stage: Build
+  extends:
+    - .eu
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      changes:
+        - "common/**/*"
+        - "dashboard/**/*"
+        - "server/**/*"
+        - "Dockerfile"
+        - "package.json"
+        - ".gitlab-ci.yml"
+  variables:
+    CONFIG_IMAGE_NAME: gitlab-merger-bot
+    CONFIG_CACHE_IMAGE_NAME: gitlab-merger-bot-ci-cache
+  script:
+    - export FILES_MD5=$(find common server dashboard ./Dockerfile -type f -exec md5sum {} \; | sort -k 2 | md5sum | head -c 32)
+    - export CONFIG_IMAGE_TAG=prod-${FILES_MD5}
+    - echo "building image ${CONFIG_REGISTRY_NAME_EU}/${CONFIG_IMAGE_NAME}:${CONFIG_IMAGE_TAG}"
+    - echo "cache repo is ${CONFIG_REGISTRY_NAME_EU}/${CONFIG_CACHE_IMAGE_NAME}"
+    - mkdir -p /kaniko/.docker
+    - |
+      cat << EOF > /kaniko/.docker/config.json
+      {
+        "credHelpers": {
+          "${CONFIG_REGISTRY_NAME_EU}": "ecr-login",
+          "${CONFIG_REGISTRY_NAME_US}": "ecr-login"
+        }
+      }
+      EOF
+    - |
+      /kaniko/executor \
+        --context "${CI_PROJECT_DIR}" \
+        --dockerfile "${CI_PROJECT_DIR}/Dockerfile" \
+        --destination "${CONFIG_REGISTRY_NAME_EU}/${CONFIG_IMAGE_NAME}:${CONFIG_IMAGE_TAG}" \
+        --destination "${CONFIG_REGISTRY_NAME_US}/${CONFIG_IMAGE_NAME}:${CONFIG_IMAGE_TAG}" \
+        --cache-repo "${CONFIG_REGISTRY_NAME_EU}/${CONFIG_CACHE_IMAGE_NAME}" \
+        --cache=true
+
+update image tag:
+  stage: Update Tag
+  extends:
+    - .eu
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master" && $CI_PIPELINE_SOURCE == "push"'
+      changes:
+        - "common/**/*"
+        - "dashboard/**/*"
+        - "server/**/*"
+        - "Dockerfile"
+        - "package.json"
+        - ".gitlab-ci.yml"
+  variables:
+    GITLAB_TOKEN: ${GITLAB_AUTH_TOKEN}
+  script:
+   - git config --global user.name "Kazimír"
+   - git config --global user.email "developers@shipmonk.com"
+   - export FILES_MD5=$(find common server dashboard ./Dockerfile -type f -exec md5sum {} \; | sort -k 2 | md5sum | head -c 32)
+   - export CONFIG_IMAGE_TAG=prod-${FILES_MD5}
+   - export PUSHED=0
+   - export LOOPS=5
+   - |
+      while [ $PUSHED -eq 0 ] && [ $LOOPS -gt 0 ]
+      do
+        git clone ShipMonkDeploy:${GITLAB_AUTH_TOKEN}@gitlab.com:ShipMonk/infrastructure.git
+        cd infrastructure
+        yq eval '(.images[] | select(has("name")) | select(.name == "515719629808.dkr.ecr.eu-west-1.amazonaws.com/gitlab-merger-bot")).newTag = "'${CONFIG_IMAGE_TAG}'"' -i argocd/jsonnet/services/gitlab-merger-bot/kustomization.yaml
+        git add .
+        git commit -m "Updated image gitlab-merger-bot to ${CONFIG_IMAGE_TAG}"
+        git pull origin master -r
+        git push origin master
+        if [ $? -eq 0 ]
+        then
+          export PUSHED=1
+        fi
+        let "LOOPS-=1"
+        cd ../
+        rm -rf infrastructure
+      done
