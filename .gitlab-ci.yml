@@ -1,0 +1,88 @@
+variables:
+  CONFIG_IMAGE_DEPLOYMENT: registry.gitlab.com/shipmonk/infrastructure/deployment:prod-ae8889cfe457c3e02a37149991330c8f
+  CONFIG_IMAGE_DEPLOYMENT_AWS: 515719629808.dkr.ecr.eu-west-1.amazonaws.com/deployment:prod-ae8889cfe457c3e02a37149991330c8f
+  CONFIG_IMAGE_KUBE_VALIDATION: registry.gitlab.com/shipmonk/infrastructure/kube-validation:prod-9672ac6c3473123592d3c7433c11b177
+  CONFIG_IMAGE_DOCKER: registry.gitlab.com/shipmonk/infrastructure/docker:19.03.8-dind
+  CONFIG_REGISTRY_NAME_EU: 515719629808.dkr.ecr.eu-west-1.amazonaws.com
+  CONFIG_REGISTRY_NAME_US: 515719629808.dkr.ecr.us-east-1.amazonaws.com
+  CONFIG_REGISTRY_NAME_GITLAB: registry.gitlab.com/shipmonk/infrastructure
+
+image:
+  name: $CONFIG_IMAGE_DEPLOYMENT
+
+stages:
+  - Build
+
+# prefabs
+.eu:
+  tags:
+    - gitlab-org
+
+.master:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master" && $CI_PIPELINE_SOURCE == "push"'
+
+.mr:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+.useDefaultSchedule:
+  only:
+    refs:
+      - schedules
+  tags:
+    - gitlab-org
+
+build docker image:
+  stage: build
+  extends:
+    - .eu
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "common/**/*"
+        - "dashboard/**/*"
+        - "server/**/*"
+        - "Dockerfile"
+        - "package.json"
+        - ".gitlab-ci.yml"
+  variables:
+    # CONFIG_REGISTRY_NAME_EU: 515719629808.dkr.ecr.eu-west-1.amazonaws.com
+    # CONFIG_REGISTRY_NAME_US: 515719629808.dkr.ecr.us-east-1.amazonaws.com
+    # CONFIG_REGISTRY_NAME_GITLAB: registry.gitlab.com/shipmonk/infrastructure
+    CONFIG_IMAGE_NAME: gitlab-merger-bot
+    CONFIG_CACHE_IMAGE_NAME: gitlab-merger-bot-ci-cache
+  script:
+    - export FILES_MD5=$(find common server dashboard ./Dockerfile -type f -exec md5sum {} \; | sort -k 2 | md5sum | head -c 3)
+    - export CONFIG_IMAGE_TAG prod-${FILES_MD5}
+    - echo "building image ${CONFIG_REGISTRY_NAME}/${CONFIG_IMAGE_NAME}:${CONFIG_IMAGE_TAG}"
+    - echo "cache repo is ${CONFIG_REGISTRY_NAME}/${CONFIG_CACHE_IMAGE_NAME}"
+    - export GITLAB_REGISTRY_CREDS=$(echo -n "${CI_REGISTRY_USER}:${CI_REGISTRY_PASSWORD}" | base64)
+    - mkdir -p /kaniko/.docker
+    - |
+      cat << EOF > /kaniko/.docker/config.json
+      {
+        "auths": {
+          "${CI_REGISTRY}": {
+            "auth": "${GITLAB_REGISTRY_CREDS}"
+          }
+        },
+        "credHelpers": {
+          "${CONFIG_REGISTRY_NAME_EU}": "ecr-login",
+          "${CONFIG_REGISTRY_NAME_US}": "ecr-login"
+        }
+      }
+      EOF
+    - |
+      /kaniko/executor \
+        --context "${CI_PROJECT_DIR}" \
+        --dockerfile "${CI_PROJECT_DIR}/Dockerfile" \
+        --destination "${CONFIG_REGISTRY_NAME_EU}/${CONFIG_IMAGE_NAME}:${CONFIG_IMAGE_TAG}" \
+        --destination "${CONFIG_REGISTRY_NAME_US}/${CONFIG_IMAGE_NAME}:${CONFIG_IMAGE_TAG}" \
+        --destination "${CONFIG_REGISTRY_NAME_GITLAB}/${CONFIG_IMAGE_NAME}:${CONFIG_IMAGE_TAG}" \
+        --cache-repo "${CONFIG_REGISTRY_NAME_EU}/${CONFIG_CACHE_IMAGE_NAME}" \
+        --cache=true
+# ---------------------
