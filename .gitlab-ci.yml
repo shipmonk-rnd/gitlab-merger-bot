@@ -38,7 +38,7 @@ build docker image:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_COMMIT_BRANCH != "master" && $CI_PIPELINE_SOURCE == "push"'
       changes:
         - "common/**/*"
         - "dashboard/**/*"
@@ -98,7 +98,7 @@ update image tag:
    - |
       while [ $PUSHED -eq 0 ] && [ $LOOPS -gt 0 ]
       do
-        git clone ShipMonkDeploy:${GITLAB_AUTH_TOKEN}@gitlab.com:ShipMonk/infrastructure.git
+        git clone https://ShipMonkDeploy:${GITLAB_AUTH_TOKEN}@gitlab.com/ShipMonk/infrastructure.git
         cd infrastructure
         yq eval '(.images[] | select(has("name")) | select(.name == "515719629808.dkr.ecr.eu-west-1.amazonaws.com/gitlab-merger-bot")).newTag = "'${CONFIG_IMAGE_TAG}'"' -i argocd/jsonnet/services/gitlab-merger-bot/kustomization.yaml
         git add .
