@@ -1,5 +1,5 @@
 variables:
-  CONFIG_IMAGE_DEPLOYMENT: registry.gitlab.com/shipmonk/infrastructure/deployment:prod-ae8889cfe457c3e02a37149991330c8f
+  CONFIG_IMAGE_DEPLOYMENT: registry.gitlab.com/shipmonk/infrastructure/deployment:prod-f1f9a2146528f39d694dd84d1c161c80
   CONFIG_REGISTRY_NAME_EU: 515719629808.dkr.ecr.eu-west-1.amazonaws.com
   CONFIG_REGISTRY_NAME_US: 515719629808.dkr.ecr.us-east-1.amazonaws.com
 
@@ -45,7 +45,6 @@ build docker image:
         - "server/**/*"
         - "Dockerfile"
         - "package.json"
-        - ".gitlab-ci.yml"
   variables:
     CONFIG_IMAGE_NAME: gitlab-merger-bot
     CONFIG_CACHE_IMAGE_NAME: gitlab-merger-bot-ci-cache
