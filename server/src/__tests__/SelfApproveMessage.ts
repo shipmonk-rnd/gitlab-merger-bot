@@ -92,9 +92,10 @@ it('self approve message format', async () => {
 	const expectedBody = `
 #postmergeapprove
 ====
-Merge request was self-approved by @username1. You need to get second approve from anybody but you. They should reply l thread with 'Approved' message to post-approve this MR.
+Merge request was self-approved by @username1. You need to get second approve from anybody but you. They should reply to the thread with 'Approved' message to post-approve this MR.
+
 Code owners:
-/backend/: @username2 @username3
+* \`/backend/\`: @username2 @username3
 `;
 	expect(
 		gitlabApiMock.createMergeRequestNote.mock.calls[

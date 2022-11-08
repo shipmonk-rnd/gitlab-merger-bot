@@ -102,11 +102,12 @@ export const notifyIfMergeRequestIsSelfApproved = async (
 ====
 Merge request was self-approved by @${
 			mergeRequest.author.username
-		}. You need to get second approve from anybody but you. They should reply l thread with 'Approved' message to post-approve this MR.
+		}. You need to get second approve from anybody but you. They should reply to the thread with 'Approved' message to post-approve this MR.
+
 Code owners:
 ${codeowners
 	.map((mergeRequestCodeOwners: MergeRequestCodeOwners): string => {
-		return `${mergeRequestCodeOwners.name}: ${mergeRequestCodeOwners.approverUsernames.join(
+		return `* \`${mergeRequestCodeOwners.name}\`: ${mergeRequestCodeOwners.approverUsernames.join(
 			' ',
 		)}`;
 	})
