@@ -35,6 +35,7 @@ export interface MergeRequest {
 	iid: number;
 	title: string;
 	author: {
+		username: string;
 		id: number;
 	};
 	assignee: MergeRequestAssignee | null;
@@ -119,6 +120,31 @@ export interface MergeRequestInfo extends MergeRequest {
 export interface MergeRequestApprovals {
 	approvals_required: number;
 	approvals_left: number;
+	approved_by: MergeRequestUserApprover[];
+}
+
+export interface MergeRequestUserApprover {
+	user: {
+		username: string;
+		id: number;
+	};
+}
+
+export interface MergeRequestApprovalState {
+	rules: MergeRequestApprovalRule[];
+}
+
+type MergeRequestApprovalRuleType = 'code_owner' | 'any_approver';
+
+export interface MergeRequestApprovalRule {
+	rule_type: MergeRequestApprovalRuleType;
+	name: string;
+	eligible_approvers: MergeRequestApprovalStateUser[];
+}
+
+export interface MergeRequestApprovalStateUser {
+	username: string;
+	id: number;
 }
 
 interface Pipeline {
@@ -206,6 +232,16 @@ export class GitlabApi {
 	): Promise<MergeRequestApprovals> {
 		return this.sendRequestWithSingleResponse(
 			`/api/v4/projects/${projectId}/merge_requests/${mergeRequestIid}/approvals`,
+			RequestMethod.Get,
+		);
+	}
+
+	public async getMergeRequestApprovalState(
+		projectId: number,
+		mergeRequestIid: number,
+	): Promise<MergeRequestApprovalState> {
+		return this.sendRequestWithSingleResponse(
+			`/api/v4/projects/${projectId}/merge_requests/${mergeRequestIid}/approval_state`,
 			RequestMethod.Get,
 		);
 	}
