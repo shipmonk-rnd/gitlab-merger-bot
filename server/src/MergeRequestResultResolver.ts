@@ -4,6 +4,7 @@ import { GitlabApi } from './GitlabApi';
 import { AcceptMergeRequestResult, AcceptMergeRequestResultKind } from './MergeRequestAcceptor';
 import { tryCancelPipeline } from './PipelineCanceller';
 import { sendNote } from './SendNote';
+import { notifyIfMergeRequestIsSelfApproved } from './NotifyIfMergeRequestIsSelfApproved';
 
 export const resolveMergeRequestResult = async (
 	gitlabApi: GitlabApi,
@@ -15,6 +16,7 @@ export const resolveMergeRequestResult = async (
 	if (result.kind === AcceptMergeRequestResultKind.SuccessfullyMerged) {
 		console.log(`[MR][${mergeRequestInfo.iid}] Merge request is merged, ending`);
 		await setBotLabels(gitlabApi, mergeRequestInfo, []);
+		await notifyIfMergeRequestIsSelfApproved(gitlabApi, mergeRequestInfo);
 		return;
 	}
 
