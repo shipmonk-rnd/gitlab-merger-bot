@@ -1,10 +1,4 @@
-import {
-	GitlabApi,
-	MergeRequest,
-	MergeRequestApprovalRule,
-	MergeRequestInfo,
-	User,
-} from './GitlabApi';
+import { GitlabApi, MergeRequest, MergeRequestApprovalRule } from './GitlabApi';
 import { sendNote } from './SendNote';
 
 const authorIsOnlyApprover = async (
@@ -107,9 +101,9 @@ Merge request was self-approved by @${
 Code owners:
 ${codeowners
 	.map((mergeRequestCodeOwners: MergeRequestCodeOwners): string => {
-		return `* \`${mergeRequestCodeOwners.name}\`: ${mergeRequestCodeOwners.approverUsernames.join(
-			' ',
-		)}`;
+		return `* \`${
+			mergeRequestCodeOwners.name
+		}\`: ${mergeRequestCodeOwners.approverUsernames.join(' ')}`;
 	})
 	.join('\n')}
 `;

@@ -123,11 +123,13 @@ export interface MergeRequestApprovals {
 	approved_by: MergeRequestUserApprover[];
 }
 
+interface GitlabUser {
+	username: string;
+	id: number;
+}
+
 export interface MergeRequestUserApprover {
-	user: {
-		username: string;
-		id: number;
-	};
+	user: GitlabUser;
 }
 
 export interface MergeRequestApprovalState {
@@ -139,12 +141,7 @@ type MergeRequestApprovalRuleType = 'code_owner' | 'any_approver';
 export interface MergeRequestApprovalRule {
 	rule_type: MergeRequestApprovalRuleType;
 	name: string;
-	eligible_approvers: MergeRequestApprovalStateUser[];
-}
-
-export interface MergeRequestApprovalStateUser {
-	username: string;
-	id: number;
+	eligible_approvers: GitlabUser[];
 }
 
 interface Pipeline {
