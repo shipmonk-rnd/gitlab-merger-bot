@@ -225,6 +225,13 @@ export const acceptMergeRequest = async (
 	console.log(`[MR][${mergeRequestIid}] Calling merge request`);
 	const mergeRequestInfo = await gitlabApi.getMergeRequestInfo(projectId, mergeRequestIid);
 
+	if (config.PROJECT_ID !== '' && config.PROJECT_ID !== mergeRequestInfo.project_id.toString()) {
+		return {
+			kind: AcceptMergeRequestResultKind.CanNotBeMerged,
+			mergeRequestInfo,
+			user,
+		};
+	}
 	if (mergeRequestInfo.state === MergeState.Merged) {
 		return {
 			kind: AcceptMergeRequestResultKind.SuccessfullyMerged,

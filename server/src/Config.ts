@@ -16,6 +16,7 @@ export const defaultConfig = {
 	WEB_HOOK_TOKEN: '',
 	DRY_RUN: false,
 	HTTP_PROXY: '',
+	PROJECT_ID: '',
 };
 
 export const getConfig = (): Config => ({
@@ -62,6 +63,7 @@ export const getConfig = (): Config => ({
 	WEB_HOOK_TOKEN: env.get('WEB_HOOK_TOKEN').default(defaultConfig.WEB_HOOK_TOKEN).asString(),
 	DRY_RUN: env.get('DRY_RUN').default(`${defaultConfig.DRY_RUN}`).asBoolStrict(),
 	HTTP_PROXY: env.get('HTTP_PROXY').default('').asString(),
+	PROJECT_ID: env.get('PROJECT_ID').default('').asString(),
 });
 
 export type Config = typeof defaultConfig;
