@@ -17,6 +17,7 @@ import { setBotLabels } from './BotLabelsSetter';
 import { Config } from './Config';
 import { Job } from './Job';
 import { JobStatus } from './generated/graphqlgen';
+import { canBeMergeRequestProcessed } from './Utils';
 
 export enum AcceptMergeRequestResultKind {
 	SuccessfullyMerged,
@@ -225,7 +226,7 @@ export const acceptMergeRequest = async (
 	console.log(`[MR][${mergeRequestIid}] Calling merge request`);
 	const mergeRequestInfo = await gitlabApi.getMergeRequestInfo(projectId, mergeRequestIid);
 
-	if (config.PROJECT_ID !== '' && config.PROJECT_ID !== mergeRequestInfo.project_id.toString()) {
+	if (canBeMergeRequestProcessed(config, mergeRequestInfo.project_id)) {
 		return {
 			kind: AcceptMergeRequestResultKind.CanNotBeMerged,
 			mergeRequestInfo,

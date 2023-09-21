@@ -2,6 +2,7 @@ import { GitlabApi, MergeRequest, User } from './GitlabApi';
 import { prepareMergeRequestForMerge } from './MergeRequestReceiver';
 import { Config } from './Config';
 import { Worker } from './Worker';
+import { canBeMergeRequestProcessed } from './Utils';
 
 export class MergeRequestCheckerLoop {
 	private _stop: boolean = true;
@@ -71,8 +72,21 @@ export class MergeRequestCheckerLoop {
 	private async task() {
 		console.log('[loop] Checking assigned merge requests');
 		const assignedMergeRequests = await this.gitlabApi.getAssignedOpenedMergeRequests();
-		const possibleToAcceptMergeRequests = assignedMergeRequests.map(
-			(mergeRequest: MergeRequest) =>
+		const possibleToAcceptMergeRequests = assignedMergeRequests
+			.filter((mergeRequest: MergeRequest): boolean => {
+				const canBeProcessed = canBeMergeRequestProcessed(
+					this.config,
+					mergeRequest.project_id,
+				);
+				if (!canBeProcessed) {
+					console.log(
+						`[loop] The MR ${mergeRequest.iid} is excluded from processing. ${mergeRequest.references.full}`,
+					);
+				}
+
+				return canBeProcessed;
+			})
+			.map((mergeRequest: MergeRequest) =>
 				prepareMergeRequestForMerge(
 					this.gitlabApi,
 					this.user,
@@ -80,7 +94,7 @@ export class MergeRequestCheckerLoop {
 					this.config,
 					mergeRequest,
 				),
-		);
+			);
 
 		await Promise.all(possibleToAcceptMergeRequests);
 	}

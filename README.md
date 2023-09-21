@@ -99,6 +99,7 @@ GITLAB_AUTH_TOKEN="<token>" yarn run start
 | `HTTP_SERVER_ENABLE`           | `false`              | It'll enable experimental API and dashboard support        |
 | `HTTP_SERVER_PORT`             | `4000`               | It'll use different http server port                       |
 | `WEB_HOOK_TOKEN`               | ``                   | It'll enable experimental web hook support                 |
+| `PROJECT_IDS`                  | ``                   | Restrict unknown MR                                        |
 
 ## Development
 

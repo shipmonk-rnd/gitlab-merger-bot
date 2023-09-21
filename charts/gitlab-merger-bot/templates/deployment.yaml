@@ -61,6 +61,8 @@ spec:
           value: "{{ .Values.settings.httpServerPort }}"
         - name: WEB_HOOK_TOKEN
           value: "{{ .Values.settings.webHookToken }}"
+        - name: PROJECT_IDS
+          value: "{{ .Values.settings.projectIds }}"
         {{- if .Values.settings.httpProxy }}
         - name: HTTP_PROXY
           valueFrom:

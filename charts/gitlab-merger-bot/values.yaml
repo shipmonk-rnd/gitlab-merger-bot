@@ -90,3 +90,4 @@ settings:
   webHookToken: ""
   httpProxySecretName: http-proxy
   httpProxy: ""
+  projectIds: ""
