@@ -2,7 +2,7 @@ import { GitlabApi, MergeRequest, User } from './GitlabApi';
 import { prepareMergeRequestForMerge } from './MergeRequestReceiver';
 import { Config } from './Config';
 import { Worker } from './Worker';
-import { canBeMergeRequestProcessed } from './Utils';
+import { shouldMergeRequestBeProcessed } from './Utils';
 
 export class MergeRequestCheckerLoop {
 	private _stop: boolean = true;
@@ -74,7 +74,7 @@ export class MergeRequestCheckerLoop {
 		const assignedMergeRequests = await this.gitlabApi.getAssignedOpenedMergeRequests();
 		const possibleToAcceptMergeRequests = assignedMergeRequests
 			.filter((mergeRequest: MergeRequest): boolean => {
-				const canBeProcessed = canBeMergeRequestProcessed(
+				const canBeProcessed = shouldMergeRequestBeProcessed(
 					this.config,
 					mergeRequest.project_id,
 				);

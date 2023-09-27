@@ -1,9 +1,9 @@
 import { defaultConfig } from '../Config';
-import { canBeMergeRequestProcessed } from '../Utils';
+import { shouldMergeRequestBeProcessed } from '../Utils';
 
 it('discard external MR', async () => {
 	expect(
-		canBeMergeRequestProcessed(
+		shouldMergeRequestBeProcessed(
 			{
 				...defaultConfig,
 				PROJECT_IDS: '',
@@ -13,7 +13,7 @@ it('discard external MR', async () => {
 	).toBe(true);
 
 	expect(
-		canBeMergeRequestProcessed(
+		shouldMergeRequestBeProcessed(
 			{
 				...defaultConfig,
 				PROJECT_IDS: '1',
@@ -22,7 +22,7 @@ it('discard external MR', async () => {
 		),
 	).toBe(true);
 	expect(
-		canBeMergeRequestProcessed(
+		shouldMergeRequestBeProcessed(
 			{
 				...defaultConfig,
 				PROJECT_IDS: '1,2,3',
@@ -32,7 +32,7 @@ it('discard external MR', async () => {
 	).toBe(true);
 
 	expect(
-		canBeMergeRequestProcessed(
+		shouldMergeRequestBeProcessed(
 			{
 				...defaultConfig,
 				PROJECT_IDS: '2',

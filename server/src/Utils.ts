@@ -3,7 +3,7 @@ import { Config } from './Config';
 export const sleep = (ms: number): Promise<void> =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
-export const canBeMergeRequestProcessed = (
+export const shouldMergeRequestBeProcessed = (
 	config: Config,
 	mergeRequestProjectId: number,
 ): boolean => {
@@ -11,5 +11,5 @@ export const canBeMergeRequestProcessed = (
 		return true;
 	}
 
-	return config.PROJECT_IDS.toString().split(',').map(Number).includes(mergeRequestProjectId);
+	return config.PROJECT_IDS.split(',').map(Number).includes(mergeRequestProjectId);
 };
