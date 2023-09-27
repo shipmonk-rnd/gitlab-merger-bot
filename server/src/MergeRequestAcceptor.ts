@@ -365,7 +365,7 @@ export const acceptMergeRequest = async (
 		merge_commit_message?: string;
 	};
 
-	let requestBody: BodyStructure = {
+	const requestBody: BodyStructure = {
 		should_remove_source_branch: config.REMOVE_BRANCH_AFTER_MERGE,
 		sha: mergeRequestInfo.diff_refs.head_sha,
 		squash: useSquash,
