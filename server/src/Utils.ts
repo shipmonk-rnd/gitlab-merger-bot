@@ -7,9 +7,9 @@ export const shouldMergeRequestBeProcessed = (
 	config: Config,
 	mergeRequestProjectId: number,
 ): boolean => {
-	if (config.PROJECT_IDS === '') {
+	if (config.PROJECT_IDS.toString() === [''].toString()) {
 		return true;
 	}
 
-	return config.PROJECT_IDS.split(',').map(Number).includes(mergeRequestProjectId);
+	return config.PROJECT_IDS.map(Number).includes(mergeRequestProjectId);
 };

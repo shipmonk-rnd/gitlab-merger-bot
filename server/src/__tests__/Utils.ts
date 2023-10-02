@@ -6,7 +6,7 @@ it('discard external MR', async () => {
 		shouldMergeRequestBeProcessed(
 			{
 				...defaultConfig,
-				PROJECT_IDS: '',
+				PROJECT_IDS: [''],
 			},
 			1,
 		),
@@ -16,7 +16,7 @@ it('discard external MR', async () => {
 		shouldMergeRequestBeProcessed(
 			{
 				...defaultConfig,
-				PROJECT_IDS: '1',
+				PROJECT_IDS: ['1'],
 			},
 			1,
 		),
@@ -25,7 +25,7 @@ it('discard external MR', async () => {
 		shouldMergeRequestBeProcessed(
 			{
 				...defaultConfig,
-				PROJECT_IDS: '1,2,3',
+				PROJECT_IDS: ['1', '2', '3'],
 			},
 			2,
 		),
@@ -35,7 +35,7 @@ it('discard external MR', async () => {
 		shouldMergeRequestBeProcessed(
 			{
 				...defaultConfig,
-				PROJECT_IDS: '2',
+				PROJECT_IDS: ['2'],
 			},
 			0,
 		),
