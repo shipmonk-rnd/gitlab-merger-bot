@@ -13,6 +13,17 @@ import { Worker } from './Worker';
 import { Config } from './Config';
 import { JobInfo, JobPriority } from './generated/graphqlgen';
 
+const isMergeRequestFromSupportedProject = (
+	mergeRequest: MergeRequest,
+	config: Config,
+): boolean => {
+	if (config.PROJECT_IDS === undefined) {
+		return true;
+	}
+
+	return config.PROJECT_IDS.includes(mergeRequest.project_id.toString(10));
+};
+
 export const prepareMergeRequestForMerge = async (
 	gitlabApi: GitlabApi,
 	user: User,
@@ -33,6 +44,23 @@ export const prepareMergeRequestForMerge = async (
 			webUrl: mergeRequest.web_url,
 		},
 	};
+
+	if (!isMergeRequestFromSupportedProject(mergeRequest, config)) {
+		console.log(
+			`[loop][${mergeRequest.iid}] Merge request is excluded from processing as it belongs to different project (${mergeRequest.project_id}), assigning back`,
+		);
+
+		await Promise.all([
+			assignToAuthorAndResetLabels(gitlabApi, mergeRequest, user),
+			sendNote(
+				gitlabApi,
+				mergeRequest,
+				`Merge request can't be merged, I'm not allowed to work with MRs from foreign projects.`,
+			),
+		]);
+
+		return;
+	}
 
 	const currentJob = worker.findJob(mergeRequest.project_id, jobId);
 	if (currentJob !== null) {
