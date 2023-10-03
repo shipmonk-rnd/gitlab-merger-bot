@@ -6,7 +6,7 @@ it('discard external MR', async () => {
 		shouldMergeRequestBeProcessed(
 			{
 				...defaultConfig,
-				PROJECT_IDS: [''],
+				PROJECT_IDS: undefined,
 			},
 			1,
 		),
