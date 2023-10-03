@@ -13,15 +13,15 @@ import { Worker } from './Worker';
 import { Config } from './Config';
 import { JobInfo, JobPriority } from './generated/graphqlgen';
 
-const isMergeRequestFromSupportedProject = (
-	mergeRequest: MergeRequest,
+export const isMergeRequestFromSupportedProject = (
+	mergeRequestProjectId: string,
 	config: Config,
 ): boolean => {
 	if (config.PROJECT_IDS === undefined) {
 		return true;
 	}
 
-	return config.PROJECT_IDS.includes(mergeRequest.project_id.toString(10));
+	return config.PROJECT_IDS.includes(mergeRequestProjectId);
 };
 
 export const prepareMergeRequestForMerge = async (
@@ -45,7 +45,7 @@ export const prepareMergeRequestForMerge = async (
 		},
 	};
 
-	if (!isMergeRequestFromSupportedProject(mergeRequest, config)) {
+	if (!isMergeRequestFromSupportedProject(mergeRequest.project_id.toString(10), config)) {
 		console.log(
 			`[loop][${mergeRequest.iid}] Merge request is excluded from processing as it belongs to different project (${mergeRequest.project_id}), assigning back`,
 		);
