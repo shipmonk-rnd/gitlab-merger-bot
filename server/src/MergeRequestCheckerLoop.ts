@@ -71,15 +71,14 @@ export class MergeRequestCheckerLoop {
 	private async task() {
 		console.log('[loop] Checking assigned merge requests');
 		const assignedMergeRequests = await this.gitlabApi.getAssignedOpenedMergeRequests();
-		const possibleToAcceptMergeRequests = assignedMergeRequests.map(
-			(mergeRequest: MergeRequest) =>
-				prepareMergeRequestForMerge(
-					this.gitlabApi,
-					this.user,
-					this.worker,
-					this.config,
-					mergeRequest,
-				),
+		const possibleToAcceptMergeRequests = assignedMergeRequests.map((mergeRequest) =>
+			prepareMergeRequestForMerge(
+				this.gitlabApi,
+				this.user,
+				this.worker,
+				this.config,
+				mergeRequest,
+			),
 		);
 
 		await Promise.all(possibleToAcceptMergeRequests);

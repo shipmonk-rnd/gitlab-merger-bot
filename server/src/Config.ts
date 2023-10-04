@@ -1,6 +1,25 @@
 import * as env from 'env-var';
 
-export const defaultConfig = {
+export type Config = {
+	GITLAB_URL: string;
+	GITLAB_AUTH_TOKEN: string;
+	CI_CHECK_INTERVAL: number;
+	MR_CHECK_INTERVAL: number;
+	REMOVE_BRANCH_AFTER_MERGE: boolean;
+	SQUASH_MERGE_REQUEST: boolean;
+	PREFER_GITLAB_TEMPLATE: boolean;
+	AUTORUN_MANUAL_BLOCKING_JOBS: boolean;
+	SKIP_SQUASHING_LABEL: string;
+	HIGH_PRIORITY_LABEL: string;
+	HTTP_SERVER_ENABLE: boolean;
+	HTTP_SERVER_PORT: number;
+	WEB_HOOK_TOKEN: string;
+	DRY_RUN: boolean;
+	HTTP_PROXY: string;
+	PROJECT_IDS: string[] | undefined;
+};
+
+export const defaultConfig: Config = {
 	GITLAB_URL: 'https://gitlab.com',
 	GITLAB_AUTH_TOKEN: '',
 	CI_CHECK_INTERVAL: 5,
@@ -16,6 +35,7 @@ export const defaultConfig = {
 	WEB_HOOK_TOKEN: '',
 	DRY_RUN: false,
 	HTTP_PROXY: '',
+	PROJECT_IDS: undefined,
 };
 
 export const getConfig = (): Config => ({
@@ -62,6 +82,5 @@ export const getConfig = (): Config => ({
 	WEB_HOOK_TOKEN: env.get('WEB_HOOK_TOKEN').default(defaultConfig.WEB_HOOK_TOKEN).asString(),
 	DRY_RUN: env.get('DRY_RUN').default(`${defaultConfig.DRY_RUN}`).asBoolStrict(),
 	HTTP_PROXY: env.get('HTTP_PROXY').default('').asString(),
+	PROJECT_IDS: env.get('PROJECT_IDS').asArray(','),
 });
-
-export type Config = typeof defaultConfig;
