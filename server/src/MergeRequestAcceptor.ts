@@ -327,6 +327,21 @@ export const acceptMergeRequest = async (
 		};
 	}
 
+	if (
+		mergeRequestInfo.head_pipeline !== null &&
+		mergeRequestInfo.sha !== mergeRequestInfo.head_pipeline.sha
+	) {
+		console.log(
+			`[MR][${mergeRequestInfo.iid}] detecting old pipeline as head. Marking as PipelineInProgress`,
+		);
+		return {
+			kind: AcceptMergeRequestResultKind.PipelineInProgress,
+			mergeRequestInfo,
+			user,
+			pipeline: mergeRequestInfo.head_pipeline,
+		};
+	}
+
 	// the latest pipeline is incomplete / has failed
 	if (
 		mergeRequestInfo.head_pipeline !== null &&
@@ -375,6 +390,10 @@ export const acceptMergeRequest = async (
 		requestBody.squash_commit_message = `${mergeRequestInfo.title} (!${mergeRequestInfo.iid})`;
 		requestBody.merge_commit_message = `${mergeRequestInfo.title} (!${mergeRequestInfo.iid})`;
 	}
+
+	console.log(
+		`[MR][${mergeRequestInfo.iid}] attempting to merge MR`,
+	);
 
 	const response = await gitlabApi.sendRawRequest(
 		`/api/v4/projects/${mergeRequestInfo.project_id}/merge_requests/${mergeRequestInfo.iid}/merge`,
@@ -714,6 +733,10 @@ export const runAcceptingMergeRequest = async (
 		) {
 			throw new Error(`Unexpected pipeline status: ${currentPipeline.status}`);
 		}
+	} else {
+		console.log(
+			`[MR][${mergeRequestInfo.iid}] no pipeline exists. Proceeding do merge`,
+		);
 	}
 
 	if (containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
