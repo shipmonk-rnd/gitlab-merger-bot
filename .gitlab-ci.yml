@@ -48,6 +48,7 @@ build docker image:
   variables:
     CONFIG_IMAGE_NAME: gitlab-merger-bot
     CONFIG_CACHE_IMAGE_NAME: gitlab-merger-bot-ci-cache
+    NODE_TARGET: node14-linux-x64
   script:
     - export FILES_MD5=$(find common server dashboard ./Dockerfile -type f -exec md5sum {} \; | sort -k 2 | md5sum | head -c 32)
     - export CONFIG_IMAGE_TAG=prod-${FILES_MD5}
@@ -65,6 +66,7 @@ build docker image:
       EOF
     - |
       /kaniko/executor \
+        --build-arg TARGET=${NODE_TARGET} \
         --context "${CI_PROJECT_DIR}" \
         --dockerfile "${CI_PROJECT_DIR}/Dockerfile" \
         --destination "${CONFIG_REGISTRY_NAME_EU}/${CONFIG_IMAGE_NAME}:${CONFIG_IMAGE_TAG}" \
