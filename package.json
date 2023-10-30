@@ -20,5 +20,8 @@
 		"hooks": {
 			"pre-commit": "pretty-quick --staged --pattern \"**/*.*(js|json|ts|tsx)\""
 		}
+	},
+	"dependencies": {
+		"pkg": "5.1.0"
 	}
 }

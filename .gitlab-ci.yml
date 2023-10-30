@@ -1,5 +1,5 @@
 variables:
-  CONFIG_IMAGE_DEPLOYMENT: registry.gitlab.com/shipmonk/infrastructure/deployment:prod-f1f9a2146528f39d694dd84d1c161c80
+  CONFIG_IMAGE_DEPLOYMENT: 515719629808.dkr.ecr.us-east-1.amazonaws.com/builder/go-dind:prod-10b212c80553ade1649e9d1be28f34a4
   CONFIG_REGISTRY_NAME_EU: 515719629808.dkr.ecr.eu-west-1.amazonaws.com
   CONFIG_REGISTRY_NAME_US: 515719629808.dkr.ecr.us-east-1.amazonaws.com
 
@@ -8,12 +8,14 @@ image:
 
 stages:
   - Build
+  - Repush
   - Update Tag
 
 # prefabs
 .eu:
   tags:
-    - gitlab-org
+    - eu
+    - dev
 
 .master:
   rules:
@@ -30,15 +32,38 @@ stages:
   tags:
     - gitlab-org
 
-build docker image:
+.useDefaultDind:
+  tags:
+    - eu
+    - dev
+    - dind
+  services:
+    - name: 515719629808.dkr.ecr.eu-west-1.amazonaws.com/docker:24.0.6-dind
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_TLS_VERIFY: 1
+    DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
+
+.useDefaultDindArm:
+  extends:
+    - .useDefaultDind
+  tags:
+    - eu
+    - dev
+    - dind-arm
+
+build docker image (AMD):
   stage: Build
   extends:
     - .eu
+    - .useDefaultDind
   image:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
   rules:
-    - if: '$CI_COMMIT_BRANCH != "master" && $CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_COMMIT_BRANCH != "master" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event")'
       changes:
         - "common/**/*"
         - "dashboard/**/*"
@@ -48,9 +73,12 @@ build docker image:
   variables:
     CONFIG_IMAGE_NAME: gitlab-merger-bot
     CONFIG_CACHE_IMAGE_NAME: gitlab-merger-bot-ci-cache
+    CONFIG_IMAGE_ARCH: amd64
+    NODE_ARCH: x64
+    NODE_TARGET: node14-linux-${NODE_ARCH}
   script:
     - export FILES_MD5=$(find common server dashboard ./Dockerfile -type f -exec md5sum {} \; | sort -k 2 | md5sum | head -c 32)
-    - export CONFIG_IMAGE_TAG=prod-${FILES_MD5}
+    - export CONFIG_IMAGE_TAG=prod-${FILES_MD5}-${CONFIG_IMAGE_ARCH}
     - echo "building image ${CONFIG_REGISTRY_NAME_EU}/${CONFIG_IMAGE_NAME}:${CONFIG_IMAGE_TAG}"
     - echo "cache repo is ${CONFIG_REGISTRY_NAME_EU}/${CONFIG_CACHE_IMAGE_NAME}"
     - mkdir -p /kaniko/.docker
@@ -65,12 +93,56 @@ build docker image:
       EOF
     - |
       /kaniko/executor \
+        --build-arg TARGET=${NODE_TARGET} \
         --context "${CI_PROJECT_DIR}" \
         --dockerfile "${CI_PROJECT_DIR}/Dockerfile" \
         --destination "${CONFIG_REGISTRY_NAME_EU}/${CONFIG_IMAGE_NAME}:${CONFIG_IMAGE_TAG}" \
         --destination "${CONFIG_REGISTRY_NAME_US}/${CONFIG_IMAGE_NAME}:${CONFIG_IMAGE_TAG}" \
         --cache-repo "${CONFIG_REGISTRY_NAME_EU}/${CONFIG_CACHE_IMAGE_NAME}" \
         --cache=true
+
+build docker image (ARM):
+  extends:
+    - build docker image (AMD)
+    - .useDefaultDindArm
+  variables:
+    CONFIG_IMAGE_ARCH: arm64
+    NODE_ARCH: arm64
+
+build docker image (multiarch):
+  extends:
+    - .eu
+    - .useDefaultDind
+  needs:
+    - "build docker image (AMD)"
+    - "build docker image (ARM)"
+  rules:
+    - if: '$CI_COMMIT_BRANCH != "master" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event")'
+      changes:
+        - "common/**/*"
+        - "dashboard/**/*"
+        - "server/**/*"
+        - "Dockerfile"
+        - "package.json"
+  stage: Repush
+  variables:
+    PUSH_TO_US: "true"
+  script:
+    - export FILES_MD5=$(find common server dashboard ./Dockerfile -type f -exec md5sum {} \; | sort -k 2 | md5sum | head -c 32)
+    - export IMAGE_TAG=prod-${FILES_MD5}
+    - docker pull ${CONFIG_REGISTRY_NAME_EU}/gitlab-merger-bot:${IMAGE_TAG}-amd
+    - docker pull ${CONFIG_REGISTRY_NAME_EU}/gitlab-merger-bot:${IMAGE_TAG}-arm
+    - docker manifest create ${CONFIG_REGISTRY_NAME_EU}/gitlab-merger-bot:${IMAGE_TAG} ${CONFIG_REGISTRY_NAME_EU}/gitlab-merger-bot:${IMAGE_TAG}-amd ${CONFIG_REGISTRY_NAME_EU}/gitlab-merger-bot:${IMAGE_TAG}-arm
+    - docker manifest push ${CONFIG_REGISTRY_NAME_EU}/gitlab-merger-bot:${IMAGE_TAG}
+    - |
+      if [[ "$PUSH_TO_US" == "true" ]]; then
+        docker tag ${CONFIG_REGISTRY_NAME_EU}/gitlab-merger-bot:${IMAGE_TAG}-arm ${CONFIG_REGISTRY_NAME_US}/gitlab-merger-bot:${IMAGE_TAG}-arm
+        docker tag ${CONFIG_REGISTRY_NAME_EU}/gitlab-merger-bot:${IMAGE_TAG}-amd ${CONFIG_REGISTRY_NAME_US}/gitlab-merger-bot:${IMAGE_TAG}-amd
+        docker push ${CONFIG_REGISTRY_NAME_US}/gitlab-merger-bot:${IMAGE_TAG}-arm
+        docker push ${CONFIG_REGISTRY_NAME_US}/gitlab-merger-bot:${IMAGE_TAG}-amd
+        docker manifest create ${CONFIG_REGISTRY_NAME_US}/gitlab-merger-bot:${IMAGE_TAG} ${CONFIG_REGISTRY_NAME_US}/gitlab-merger-bot:${IMAGE_TAG}-amd ${CONFIG_REGISTRY_NAME_US}/gitlab-merger-bot:${IMAGE_TAG}-arm
+        docker manifest push ${CONFIG_REGISTRY_NAME_US}/gitlab-merger-bot:${IMAGE_TAG}
+      fi
 
 update image tag:
   stage: Update Tag

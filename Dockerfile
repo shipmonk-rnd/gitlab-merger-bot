@@ -1,5 +1,7 @@
-FROM node:12.16.1-alpine AS base
+FROM node:14.21.3-bullseye-slim AS base
 WORKDIR /app
+
+ARG TARGET
 
 COPY ./package.json ./yarn.lock ./
 COPY ./server/package.json ./server/
@@ -24,6 +26,8 @@ RUN set -ex \
 
 COPY ./server ./
 
+ENV npm_config_target=$TARGET
+
 RUN set -ex \
 	&& yarn run build \
 	&& yarn run build-bin
@@ -40,17 +44,15 @@ RUN set -ex \
 	&& yarn run build \
 	&& yarn run export
 
-
-FROM alpine:3.11
+FROM debian:bullseye-slim
 WORKDIR /app
 CMD ["/app/server/gitlab-merger-bot"]
 ENV NODE_ENV=production
 
 RUN set -ex \
-	&& apk --no-cache --update add \
-		ca-certificates \
-		libstdc++ \
-		libgcc
+	&& apt update \
+	&& apt -y install \
+		ca-certificates 
 
 COPY --from=server-build /app/server/gitlab-merger-bot /app/server/
 COPY --from=dashboard-build /app/dashboard/out /app/dashboard/out/
