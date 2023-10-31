@@ -15,7 +15,6 @@ RUN set -ex \
 
 COPY ./schema.graphql ./
 
-
 FROM base AS server-build
 WORKDIR /app/server
 
@@ -31,7 +30,6 @@ ENV npm_config_target=$TARGET
 RUN set -ex \
 	&& yarn run build \
 	&& yarn run build-bin
-
 
 FROM base AS dashboard-build
 WORKDIR /app/dashboard
