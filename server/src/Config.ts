@@ -17,6 +17,9 @@ export type Config = {
 	DRY_RUN: boolean;
 	HTTP_PROXY: string;
 	PROJECT_IDS: string[] | undefined;
+	MARKED_AS_BUG_LABEL: string;
+	FREEZE_REQUIRED_APPROVALS_IDS: string[] | undefined;
+	FREEZE_REQUIRED_PROJECT_IDS: string[] | undefined;
 };
 
 export const defaultConfig: Config = {
@@ -36,6 +39,9 @@ export const defaultConfig: Config = {
 	DRY_RUN: false,
 	HTTP_PROXY: '',
 	PROJECT_IDS: undefined,
+	MARKED_AS_BUG_LABEL: 'bot:bug',
+	FREEZE_REQUIRED_APPROVALS_IDS: undefined,
+	FREEZE_REQUIRED_PROJECT_IDS: undefined,
 };
 
 export const getConfig = (): Config => ({
@@ -83,4 +89,14 @@ export const getConfig = (): Config => ({
 	DRY_RUN: env.get('DRY_RUN').default(`${defaultConfig.DRY_RUN}`).asBoolStrict(),
 	HTTP_PROXY: env.get('HTTP_PROXY').default('').asString(),
 	PROJECT_IDS: env.get('PROJECT_IDS').asArray(','),
+	MARKED_AS_BUG_LABEL: env
+		.get('MARKED_AS_BUG_LABEL')
+		.default(defaultConfig.MARKED_AS_BUG_LABEL)
+		.asString(),
+	FREEZE_REQUIRED_APPROVALS_IDS: env
+		.get('FREEZE_REQUIRED_APPROVALS_IDS')
+		.asArray(','),
+	FREEZE_REQUIRED_PROJECT_IDS: env
+		.get('FREEZE_REQUIRED_PROJECT_IDS')
+		.asArray(','),
 });

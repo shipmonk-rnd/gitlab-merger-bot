@@ -17,6 +17,7 @@ import { setBotLabels } from './BotLabelsSetter';
 import { Config } from './Config';
 import { Job } from './Job';
 import { JobStatus } from './generated/graphqlgen';
+import {isApprovedByMergeFreezeApprovers} from "./MergeFreezeApprovalCheck";
 
 export enum AcceptMergeRequestResultKind {
 	SuccessfullyMerged,
@@ -153,6 +154,7 @@ export type MergeMergeRequestResult =
 	| CheckingMergeStatusResponse
 	| WorkInProgressResponse
 	| PipelineInProgressResponse
+	| WaitingForApprovalsResponse
 	| UnauthorizedResponse;
 
 export interface AcceptMergeRequestOptions {
@@ -364,6 +366,30 @@ export const acceptMergeRequest = async (
 		});
 	}
 
+	if (
+		config.FREEZE_REQUIRED_APPROVALS_IDS !== undefined
+		&& config.FREEZE_REQUIRED_PROJECT_IDS?.includes(mergeRequestInfo.project_id.toString(10))
+	) {
+		if (!mergeRequestInfo.labels.includes(config.MARKED_AS_BUG_LABEL)) {
+			if (! await isApprovedByMergeFreezeApprovers(gitlabApi, mergeRequestInfo, config.FREEZE_REQUIRED_APPROVALS_IDS)) {
+				const approvals = await gitlabApi.getMergeRequestApprovals(
+					mergeRequestInfo.project_id,
+					mergeRequestInfo.iid,
+				);
+				return {
+					kind: AcceptMergeRequestResultKind.WaitingForApprovals,
+					mergeRequestInfo,
+					user,
+					approvals,
+				};
+			}
+		} else {
+			console.log(
+				`[MR][${mergeRequestInfo.iid}] MR marked as BUG. Skipping approval validation`,
+			);
+		}
+	}
+
 	if (config.DRY_RUN) {
 		return {
 			kind: AcceptMergeRequestResultKind.CheckingMergeStatus,
@@ -518,7 +544,8 @@ export const runAcceptingMergeRequest = async (
 		mergeResponse.kind === AcceptMergeRequestResultKind.WorkInProgress ||
 		mergeResponse.kind === AcceptMergeRequestResultKind.UnresolvedDiscussion ||
 		mergeResponse.kind === AcceptMergeRequestResultKind.ReassignedMergeRequest ||
-		mergeResponse.kind === AcceptMergeRequestResultKind.HasConflict
+		mergeResponse.kind === AcceptMergeRequestResultKind.HasConflict ||
+		mergeResponse.kind === AcceptMergeRequestResultKind.WaitingForApprovals
 	) {
 		return mergeResponse;
 	}
