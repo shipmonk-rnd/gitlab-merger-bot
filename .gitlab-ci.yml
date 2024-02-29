@@ -1,3 +1,8 @@
+include:
+  - project: shipmonk-company/shipmonk-fulfillment/shipmonk
+    ref: dae043882df67088401e9a602a1e93b0273456d1
+    file: .gitlab/.gitlab-ci.yml
+
 image:
   name: $CONFIG_IMAGE_DEPLOYMENT
 
@@ -5,20 +10,6 @@ stages:
   - Build
   - Repush
   - Update Tag
-
-# prefabs
-.eu:
-  tags:
-    - eu
-    - dev
-
-.master:
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "master" && $CI_PIPELINE_SOURCE == "push"'
-
-.mr:
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
 
 .build:
   rules:
@@ -30,41 +21,12 @@ stages:
         - "Dockerfile"
         - "package.json"
 
-.useDefaultSchedule:
-  only:
-    refs:
-      - schedules
-  tags:
-    - gitlab-org
-
-.useDefaultDind:
-  tags:
-    - eu
-    - dev
-    - dind
-  services:
-    - name: $CONFIG_DIND_IMAGE
-      alias: docker
-  variables:
-    DOCKER_HOST: tcp://docker:2376
-    DOCKER_TLS_CERTDIR: "/certs"
-    DOCKER_TLS_VERIFY: 1
-    DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
-
-.useDefaultDindArm:
-  extends:
-    - .useDefaultDind
-  tags:
-    - eu
-    - dev
-    - dind-arm
-
 build docker image (AMD):
   stage: Build
   extends:
-    - .eu
-    - .useDefaultDind
+    - .useDefaultCIJob
     - .build
+    - .runner2L
   image:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
@@ -102,14 +64,14 @@ build docker image (AMD):
 build docker image (ARM):
   extends:
     - build docker image (AMD)
-    - .useDefaultDindArm
+    - .runnerTypeARM
   variables:
     CONFIG_IMAGE_ARCH: arm64
     NODE_ARCH: arm64
 
 build docker image (multiarch):
   extends:
-    - .eu
+    - .useDefaultCIJob
     - .useDefaultDind
     - .build
   needs:
@@ -138,7 +100,7 @@ build docker image (multiarch):
 update image tag:
   stage: Update Tag
   extends:
-    - .eu
+    - .useDefaultCIJob
   rules:
     - if: '$CI_COMMIT_BRANCH == "master" && $CI_PIPELINE_SOURCE == "push"'
       changes:
