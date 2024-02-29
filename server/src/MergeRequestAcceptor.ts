@@ -327,21 +327,6 @@ export const acceptMergeRequest = async (
 		};
 	}
 
-	if (
-		mergeRequestInfo.head_pipeline !== null &&
-		mergeRequestInfo.sha !== mergeRequestInfo.head_pipeline.sha
-	) {
-		console.log(
-			`[MR][${mergeRequestInfo.iid}] detecting old pipeline as head. Marking as PipelineInProgress`,
-		);
-		return {
-			kind: AcceptMergeRequestResultKind.PipelineInProgress,
-			mergeRequestInfo,
-			user,
-			pipeline: mergeRequestInfo.head_pipeline,
-		};
-	}
-
 	// the latest pipeline is incomplete / has failed
 	if (
 		mergeRequestInfo.head_pipeline !== null &&
