@@ -116,15 +116,15 @@ update image tag:
    - git config --global user.name "Kazimír"
    - git config --global user.email "developers@shipmonk.com"
    - export FILES_MD5=$(find common server dashboard ./Dockerfile -type f -exec md5sum {} \; | sort -k 2 | md5sum | head -c 32)
-   - export CONFIG_IMAGE_TAG=prod-${FILES_MD5}
+   - export CONFIG_IMAGE_TAG=prod-${FILES_MD5}-arm64
    - export PUSHED=0
    - export LOOPS=5
    - |
       while [ $PUSHED -eq 0 ] && [ $LOOPS -gt 0 ]
       do
         git clone https://ShipMonkDeploy:${GITLAB_AUTH_TOKEN}@gitlab.com/ShipMonk/infrastructure.git
-        cd infrastructure
-        yq eval '(.images[] | select(has("name")) | select(.name == "515719629808.dkr.ecr.eu-west-1.amazonaws.com/gitlab-merger-bot")).newTag = "'${CONFIG_IMAGE_TAG}'"' -i argocd/jsonnet/services/gitlab-merger-bot/kustomization.yaml
+        cd infrastructure/argocd/jsonnet/environments/production/gitlab-merger-bot/
+        jq ".gitlab_merger_bot = \"${CONFIG_IMAGE_TAG}\"" versions.json > temp.json && mv temp.json versions.json
         git add .
         git commit -m "Updated image gitlab-merger-bot to ${CONFIG_IMAGE_TAG}"
         git pull origin master -r
