@@ -124,6 +124,7 @@ update image tag:
       do
         git clone https://ShipMonkDeploy:${GITLAB_AUTH_TOKEN}@gitlab.com/ShipMonk/infrastructure.git
         cd infrastructure/argocd/jsonnet/environments/production/
+        if git status | grep "nothing to commit, working tree clean"; then exit 0; fi
         jq ".gitlab_merger_bot = \"${CONFIG_IMAGE_TAG}\"" versions.json > temp.json && mv temp.json versions.json
         git add .
         git commit -m "Updated image gitlab-merger-bot to ${CONFIG_IMAGE_TAG}"
