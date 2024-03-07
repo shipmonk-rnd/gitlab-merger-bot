@@ -604,6 +604,10 @@ export const runAcceptingMergeRequest = async (
 
 	const currentPipeline = mergeRequestInfo.head_pipeline;
 	if (currentPipeline === null) {
+		console.log(
+			`[MR][${mergeRequestInfo.iid}] no pipeline exists.`,
+		);
+
 		return {
 			kind: AcceptMergeRequestResultKind.InvalidPipeline,
 			mergeRequestInfo,
@@ -683,10 +687,6 @@ export const runAcceptingMergeRequest = async (
 		) {
 			throw new Error(`Unexpected pipeline status: ${currentPipeline.status}`);
 		}
-	} else {
-		console.log(
-			`[MR][${mergeRequestInfo.iid}] no pipeline exists. Proceeding do merge`,
-		);
 	}
 
 	if (containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
