@@ -445,40 +445,6 @@ export const acceptMergeRequest = async (
 	};
 };
 
-const resolveCurrentPipeline = async (
-	gitlabApi: GitlabApi,
-	user: User,
-	mergeRequestInfo: MergeRequestInfo,
-): Promise<MergeRequestPipeline | null | false> => {
-	let currentPipeline: MergeRequestPipeline | null = mergeRequestInfo.pipeline;
-
-	if (currentPipeline === null || currentPipeline.sha !== mergeRequestInfo.sha) {
-		const pipelines = await gitlabApi.getMergeRequestPipelines(
-			mergeRequestInfo.project_id,
-			mergeRequestInfo.iid,
-		);
-		if (pipelines.length > 0) {
-			const currentPipelineCandidate = pipelines.find(
-				(pipeline) => pipeline.sha === mergeRequestInfo.sha,
-			);
-
-			if (currentPipelineCandidate === undefined) {
-				const message =
-					mergeRequestInfo.pipeline === null
-						? `[MR][${mergeRequestInfo.iid}] Merge request can't be merged. Pipeline does not exist`
-						: `[MR][${mergeRequestInfo.iid}] Merge request can't be merged. The latest pipeline is not executed on the latest commit`;
-				console.log(message);
-
-				return false;
-			}
-
-			currentPipeline = currentPipelineCandidate;
-		}
-	}
-
-	return currentPipeline;
-};
-
 export const runAcceptingMergeRequest = async (
 	job: Job,
 	gitlabApi: GitlabApi,
@@ -529,7 +495,7 @@ export const runAcceptingMergeRequest = async (
 
 	if (mergeRequestInfo.diverged_commits_count > 0) {
 		if (!mergeRequestInfo.rebase_in_progress && mergeRequestInfo.merge_error !== null) {
-			console.log(`[MR][${mergeRequestInfo.iid}] Merge error after rebase`);
+			console.log(`[MR][${mergeRequestInfo.iid}] Merge error after rebase: ${mergeRequestInfo.merge_error}`);
 			return {
 				kind: AcceptMergeRequestResultKind.CanNotBeMerged,
 				mergeRequestInfo,
@@ -565,8 +531,8 @@ export const runAcceptingMergeRequest = async (
 			...state,
 			checkManualJobs: false,
 		}));
-		const currentPipeline = await resolveCurrentPipeline(gitlabApi, user, mergeRequestInfo);
-		if (currentPipeline !== null && currentPipeline !== false) {
+		const currentPipeline = mergeRequestInfo.head_pipeline;
+		if (currentPipeline !== null) {
 			const jobs = uniqueNamedJobsByDate(
 				await gitlabApi.getPipelineJobs(mergeRequestInfo.project_id, currentPipeline.id),
 			);
@@ -636,17 +602,20 @@ export const runAcceptingMergeRequest = async (
 		};
 	}
 
-	const currentPipeline = await resolveCurrentPipeline(gitlabApi, user, mergeRequestInfo);
-	if (currentPipeline === false) {
+	const currentPipeline = mergeRequestInfo.head_pipeline;
+	if (currentPipeline === null) {
+		console.log(
+			`[MR][${mergeRequestInfo.iid}] no pipeline exists.`,
+		);
+
 		return {
 			kind: AcceptMergeRequestResultKind.InvalidPipeline,
 			mergeRequestInfo,
 			user,
 			pipeline: mergeRequestInfo.pipeline,
 		};
-	}
 
-	if (currentPipeline !== null) {
+	} else {
 		if (startingOrInProgressPipelineStatuses.includes(currentPipeline.status)) {
 			if (!containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
 				await setBotLabels(gitlabApi, mergeRequestInfo, [
@@ -718,10 +687,6 @@ export const runAcceptingMergeRequest = async (
 		) {
 			throw new Error(`Unexpected pipeline status: ${currentPipeline.status}`);
 		}
-	} else {
-		console.log(
-			`[MR][${mergeRequestInfo.iid}] no pipeline exists. Proceeding do merge`,
-		);
 	}
 
 	if (containsLabel(mergeRequestInfo.labels, BotLabels.WaitingForPipeline)) {
